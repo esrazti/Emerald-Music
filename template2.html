@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✦ Emerald Music ✵</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+            background: linear-gradient(180deg, #0a0a0f 0%, #1a1a2e 100%);
+            color: #e8ecf5;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .star {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            animation: twinkle 4s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+
+        .star.blue {
+            background: rgba(89, 152, 255, 0.4);
+            width: 2px;
+            height: 2px;
+        }
+
+        /* Main Container */
+        .app-container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        /* Top Navigation Bar */
+        .top-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 40px;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(89, 152, 255, 0.2);
+        }
+
+        .logo {
+            font-size: 1.5em;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #5998ff;
+            text-shadow: 0 0 20px rgba(89, 152, 255, 0.4);
+        }
+
+        .server-selector {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .server-selector label {
+            color: #c8d0e0;
+            font-size: 0.9em;
+        }
+
+        .server-selector select {
+            padding: 10px 15px;
+            background: rgba(20, 20, 30, 0.9);
+            border: 1px solid rgba(89, 152, 255, 0.3);
+            border-radius: 8px;
+            color: #e8ecf5;
+            font-size: 0.9em;
+            min-width: 200px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .server-selector select:focus {
+            outline: none;
+            border-color: #5998ff;
+            box-shadow: 0 0 15px rgba(89, 152, 255, 0.3);
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(20, 20, 30, 0.9);
+            border: 1px solid rgba(89, 152, 255, 0.3);
+            border-radius: 20px;
+            font-size: 0.85em;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #5998ff;
+            box-shadow: 0 0 10px rgba(89, 152, 255, 0.6);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.offline {
+            background: #ff5959;
+            box-shadow: 0 0 10px rgba(255, 89, 89, 0.6);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            gap: 30px;
+            padding: 30px 40px;
+            overflow: hidden;
+        }
+
+        /* Now Playing Section */
+        .now-playing {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .hero-player {
+            background: linear-gradient(135deg, rgba(89, 152, 255, 0.1) 0%, rgba(20, 20, 30, 0.8) 100%);
+            border: 1px solid rgba(89, 152, 255, 0.2);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .album-art {
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 1;
+            margin: 0 auto 30px;
+            background: linear-gradient(135deg, rgba(89, 152, 255, 0.2), rgba(138, 43, 226, 0.2));
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 6em;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .album-art::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: rotate(0deg) translateY(-100%); }
+            100% { transform: rotate(0deg) translateY(100%); }
+        }
+
+        .song-info {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .song-title {
+            font-size: 2em;
+            font-weight: 700;
+            color: #e8ecf5;
+            margin-bottom: 10px;
+        }
+
+        .song-artist {
+            font-size: 1.2em;
+            color: #c8d0e0;
+        }
+
+        /* Search Section */
+        .search-section {
+            background: rgba(20, 20, 30, 0.6);
+            border: 1px solid rgba(89, 152, 255, 0.2);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 15px 20px;
+            background: rgba(10, 10, 15, 0.8);
+            border: 1px solid rgba(89, 152, 255, 0.3);
+            border-radius: 25px;
+            color: #e8ecf5;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #5998ff;
+            box-shadow: 0 0 20px rgba(89, 152, 255, 0.3);
+        }
+
+        .search-btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #5998ff, #7b68ee);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(89, 152, 255, 0.4);
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(89, 152, 255, 0.6);
+        }
+
+        /* Playback Controls */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            background: rgba(89, 152, 255, 0.2);
+            border: 1px solid rgba(89, 152, 255, 0.4);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.2em;
+        }
+
+        .control-btn.play {
+            width: 65px;
+            height: 65px;
+            background: linear-gradient(135deg, #5998ff, #7b68ee);
+            font-size: 1.5em;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 25px rgba(89, 152, 255, 0.5);
+        }
+
+        .control-btn.cooling-down {
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        /* Volume Control */
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .volume-icon {
+            font-size: 1.2em;
+            color: #c8d0e0;
+        }
+
+        .volume-slider {
+            flex: 1;
+            height: 6px;
+            background: rgba(89, 152, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #5998ff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(89, 152, 255, 0.6);
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #5998ff;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .volume-value {
+            font-size: 0.9em;
+            color: #c8d0e0;
+            min-width: 40px;
+        }
+
+        /* Sidebar - Queue & Options */
+        .sidebar {
+            width: 350px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .sidebar-section {
+            background: rgba(20, 20, 30, 0.7);
+            border: 1px solid rgba(89, 152, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #e8ecf5;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Queue List */
+        .queue-list {
+            max-height: 400px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .queue-item {
+            padding: 12px;
+            background: rgba(89, 152, 255, 0.05);
+            border-left: 3px solid rgba(89, 152, 255, 0.3);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .queue-item:hover {
+            background: rgba(89, 152, 255, 0.15);
+            border-left-color: #5998ff;
+            transform: translateX(5px);
+        }
+
+        .queue-item.current {
+            background: rgba(89, 152, 255, 0.2);
+            border-left-color: #5998ff;
+        }
+
+        .queue-item-title {
+            color: #e8ecf5;
+            font-weight: 500;
+            margin-bottom: 5px;
+            font-size: 0.95em;
+        }
+
+        .queue-item-artist {
+            color: #c8d0e0;
+            font-size: 0.85em;
+        }
+
+        /* Playback Options */
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .option-btn {
+            padding: 12px;
+            background: rgba(89, 152, 255, 0.1);
+            border: 1px solid rgba(89, 152, 255, 0.3);
+            border-radius: 10px;
+            color: #c8d0e0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+            text-align: center;
+        }
+
+        .option-btn:hover {
+            background: rgba(89, 152, 255, 0.2);
+            border-color: #5998ff;
+            color: #e8ecf5;
+        }
+
+        .option-btn.active {
+            background: rgba(89, 152, 255, 0.3);
+            border-color: #5998ff;
+            color: #e8ecf5;
+        }
+
+        .option-btn.cooling-down {
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 15px;
+            background: rgba(89, 152, 255, 0.1);
+            border: 1px solid rgba(89, 152, 255, 0.2);
+            border-radius: 10px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #5998ff;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.8em;
+            color: #c8d0e0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            background: rgba(15, 15, 25, 0.95);
+            border: 2px solid rgba(89, 152, 255, 0.4);
+            border-radius: 12px;
+            color: #e8ecf5;
+            z-index: 1000;
+            animation: slideUp 0.4s ease;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(10, 10, 15, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(89, 152, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(89, 152, 255, 0.5);
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .sidebar {
+                width: 300px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+            }
+
+            .top-nav {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 20px;
+            }
+
+            .top-nav {
+                padding: 15px 20px;
+            }
+
+            .hero-player {
+                padding: 25px;
+            }
+
+            .album-art {
+                max-width: 300px;
+                font-size: 4em;
+            }
+
+            .song-title {
+                font-size: 1.5em;
+            }
+
+            .control-buttons {
+                gap: 10px;
+            }
+
+            .control-btn {
+                width: 45px;
+                height: 45px;
+            }
+
+            .control-btn.play {
+                width: 60px;
+                height: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="starfield" id="starfield"></div>
+
+    <div class="app-container">
+        <!-- Top Navigation -->
+        <div class="top-nav">
+            <div class="logo">✦ EMERALD MUSIC ✵</div>
+            
+            <div class="server-selector">
+                <label>Server:</label>
+                <select id="guildSelect" onchange="selectGuild()">
+                    <option value="">Select a server...</option>
+                </select>
+            </div>
+
+            <div class="status-badge">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Connecting...</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Now Playing Section -->
+            <div class="now-playing">
+                <!-- Hero Player -->
+                <div class="hero-player">
+                    <div class="album-art" id="albumArt">🎵</div>
+                    
+                    <div class="song-info">
+                        <div class="song-title" id="songTitle">No song playing</div>
+                        <div class="song-artist" id="songArtist">Select a server to start</div>
+                    </div>
+
+                    <div class="controls">
+                        <div class="control-buttons">
+                            <button class="control-btn" onclick="shuffleQueue()">🔀</button>
+                            <button class="control-btn" onclick="skipSong()">⏮️</button>
+                            <button class="control-btn play" onclick="togglePlayPause()" id="playBtn">▶️</button>
+                            <button class="control-btn" onclick="skipSong()">⏭️</button>
+                            <button class="control-btn" onclick="setLoop('toggle')">🔁</button>
+                        </div>
+
+                        <div class="volume-control">
+                            <div class="volume-icon">🔊</div>
+                            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="40" oninput="updateVolumeDisplay(this.value)">
+                            <div class="volume-value" id="volumeValue">40%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search Section -->
+                <div class="search-section">
+                    <div class="section-title">🔍 Search Music</div>
+                    <div class="search-bar">
+                        <input type="text" class="search-input" id="searchInput" placeholder="Search for songs, artists, or paste YouTube URL...">
+                        <button class="search-btn" onclick="playMusic()">Play</button>
+                    </div>
+                </div>
+
+                <!-- Stats Section -->
+                <div class="sidebar-section">
+                    <div class="section-title">📊 Statistics</div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="serverCount">0</div>
+                            <div class="stat-label">Servers</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="sessionCount">0</div>
+                            <div class="stat-label">Active</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="queueSize">0</div>
+                            <div class="stat-label">In Queue</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="uptime">0h 0m</div>
+                            <div class="stat-label">Uptime</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <!-- Queue -->
+                <div class="sidebar-section">
+                    <div class="section-title">📜 Queue</div>
+                    <div class="queue-list" id="queueList">
+                        <div class="queue-item">
+                            <div class="queue-item-title">Queue is empty</div>
+                            <div class="queue-item-artist">Add songs to get started</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Playback Options -->
+                <div class="sidebar-section">
+                    <div class="section-title">⚙️ Options</div>
+                    <div class="options-grid">
+                        <button class="option-btn" onclick="setLoop('off')">Loop Off</button>
+                        <button class="option-btn" onclick="setLoop('song')">Loop Song</button>
+                        <button class="option-btn" onclick="setLoop('queue')">Loop Queue</button>
+                        <button class="option-btn" onclick="enableRadio()">📻 Radio</button>
+                        <button class="option-btn" onclick="toggleCrossfade()">🎵 Crossfade</button>
+                        <button class="option-btn" onclick="clearQueue()">🗑️ Clear</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Generate starfield
+        const starfield = document.getElementById('starfield');
+        for (let i = 0; i < 150; i++) {
+            const star = document.createElement('div');
+            star.className = i % 10 === 0 ? 'star blue' : 'star';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            star.style.animationDelay = Math.random() * 4 + 's';
+            starfield.appendChild(star);
+        }
+
+        // WebSocket connection
+        const socket = io(window.location.origin, {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionAttempts: 5,
+            timeout: 10000
+        });
+        
+        let selectedGuildId = null;
+        let isPaused = false;
+        const buttonCooldowns = new Map();
+        const COOLDOWN_MS = 2500;
+
+        // Socket event handlers
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            updateStatus('ONLINE');
+            loadGuilds();
+            loadStatus();
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+            updateStatus('OFFLINE');
+        });
+
+        socket.on('status_update', (data) => {
+            updateDashboard(data);
+        });
+
+        function updateStatus(status) {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            if (status === 'ONLINE') {
+                statusDot.classList.remove('offline');
+                statusText.textContent = 'Connected';
+            } else {
+                statusDot.classList.add('offline');
+                statusText.textContent = 'Offline';
+            }
+        }
+
+        async function loadGuilds() {
+            try {
+                const response = await fetch('/api/guilds');
+                const data = await response.json();
+                
+                const select = document.getElementById('guildSelect');
+                select.innerHTML = '<option value="">Select a server...</option>';
+                
+                data.guilds.forEach(guild => {
+                    const option = document.createElement('option');
+                    option.value = guild.id;
+                    option.textContent = `${guild.name} ${guild.has_session ? '🎵' : ''}`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Failed to load guilds:', error);
+            }
+        }
+
+        async function loadStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                updateDashboard(data);
+            } catch (error) {
+                console.error('Failed to load status:', error);
+            }
+        }
+
+        function updateDashboard(data) {
+            if (data.servers !== undefined) {
+                document.getElementById('serverCount').textContent = data.servers;
+            }
+            if (data.sessions !== undefined) {
+                document.getElementById('sessionCount').textContent = data.sessions;
+            }
+            if (data.uptime) {
+                document.getElementById('uptime').textContent = data.uptime;
+            }
+
+            if (selectedGuildId && data.sessions_data) {
+                const sessionData = data.sessions_data.find(s => s.guild_id == selectedGuildId);
+                if (sessionData) {
+                    document.getElementById('queueSize').textContent = sessionData.queue_size || 0;
+                    if (sessionData.volume !== undefined) {
+                        document.getElementById('volumeSlider').value = sessionData.volume;
+                        updateVolumeDisplay(sessionData.volume);
+                    }
+                }
+            }
+        }
+
+        function selectGuild() {
+            const select = document.getElementById('guildSelect');
+            selectedGuildId = select.value;
+            
+            if (selectedGuildId) {
+                loadGuildQueue();
+            }
+        }
+
+        async function loadGuildQueue() {
+            if (!selectedGuildId) return;
+            
+            try {
+                const response = await fetch(`/api/session/${selectedGuildId}`);
+                const data = await response.json();
+                
+                // Update now playing
+                if (data.current_song) {
+                    document.getElementById('songTitle').textContent = data.current_song.title;
+                    document.getElementById('songArtist').textContent = data.current_song.uploader;
+                    document.getElementById('albumArt').textContent = '🎵';
+                } else {
+                    document.getElementById('songTitle').textContent = 'No song playing';
+                    document.getElementById('songArtist').textContent = 'Add songs to get started';
+                    document.getElementById('albumArt').textContent = '🎵';
+                }
+                
+                // Update queue
+                const queueList = document.getElementById('queueList');
+                queueList.innerHTML = '';
+                
+                if (data.current_song) {
+                    const currentItem = document.createElement('div');
+                    currentItem.className = 'queue-item current';
+                    currentItem.innerHTML = `
+                        <div class="queue-item-title">▶️ Now Playing</div>
+                        <div class="queue-item-artist">${data.current_song.title}</div>
+                    `;
+                    queueList.appendChild(currentItem);
+                }
+                
+                if (data.queue && data.queue.length > 0) {
+                    data.queue.forEach(song => {
+                        const item = document.createElement('div');
+                        item.className = 'queue-item';
+                        const status = song.is_downloaded ? '✅' : '⏳';
+                        item.innerHTML = `
+                            <div class="queue-item-title">${status} ${song.title}</div>
+                            <div class="queue-item-artist">${song.uploader}</div>
+                        `;
+                        queueList.appendChild(item);
+                    });
+                } else if (!data.current_song) {
+                    queueList.innerHTML = `
+                        <div class="queue-item">
+                            <div class="queue-item-title">Queue is empty</div>
+                            <div class="queue-item-artist">Add songs to get started</div>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('queueSize').textContent = data.queue_size || 0;
+            } catch (error) {
+                console.error('Failed to load queue:', error);
+            }
+        }
+
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        function disableButton(element, duration) {
+            element.classList.add('cooling-down');
+            setTimeout(() => {
+                element.classList.remove('cooling-down');
+            }, duration);
+        }
+
+        async function apiCall(endpoint, data = {}, buttonElement = null) {
+            if (!selectedGuildId) {
+                showNotification('⚠️ Please select a server first');
+                return;
+            }
+            
+            const now = Date.now();
+            const lastCall = buttonCooldowns.get(endpoint) || 0;
+            const timeSinceLastCall = now - lastCall;
+            
+            if (timeSinceLastCall < COOLDOWN_MS) {
+                return;
+            }
+            
+            buttonCooldowns.set(endpoint, now);
+            
+            if (buttonElement) {
+                disableButton(buttonElement, COOLDOWN_MS);
+            }
+            
+            try {
+                const response = await fetch(`/api/${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ ...data, guild_id: selectedGuildId })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showNotification('✅ Success!');
+                    if (endpoint === 'play') {
+                        setTimeout(() => loadGuildQueue(), 1000);
+                    }
+                } else {
+                    showNotification('❌ ' + (result.error || 'Unknown error'));
+                }
+                
+                return result;
+            } catch (error) {
+                showNotification('❌ Connection error');
+                console.error('API call failed:', error);
+            }
+        }
+
+        async function playMusic() {
+            const song = document.getElementById('searchInput').value;
+            if (!song) {
+                showNotification('⚠️ Please enter a song name or URL');
+                return;
+            }
+            await apiCall('play', { search: song });
+            document.getElementById('searchInput').value = '';
+        }
+
+        async function togglePlayPause() {
+            const playBtn = document.getElementById('playBtn');
+            if (isPaused) {
+                await apiCall('resume', {}, playBtn);
+                playBtn.textContent = '⏸️';
+                isPaused = false;
+            } else {
+                await apiCall('pause', {}, playBtn);
+                playBtn.textContent = '▶️';
+                isPaused = true;
+            }
+        }
+
+        async function skipSong() {
+            await apiCall('skip', {});
+            setTimeout(() => loadGuildQueue(), 500);
+        }
+
+        async function stopMusic() {
+            await apiCall('stop', {});
+            setTimeout(() => loadGuildQueue(), 500);
+        }
+
+        function updateVolumeDisplay(value) {
+            document.getElementById('volumeValue').textContent = value + '%';
+        }
+
+        async function setVolume(value) {
+            document.getElementById('volumeSlider').value = value;
+            updateVolumeDisplay(value);
+            await apiCall('volume', { volume: value });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const slider = document.getElementById('volumeSlider');
+            slider.addEventListener('change', async (e) => {
+                await apiCall('volume', { volume: e.target.value });
+            });
+
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    playMusic();
+                }
+            });
+        });
+
+        async function setLoop(mode) {
+            await apiCall('loop', { mode: mode });
+        }
+
+        async function shuffleQueue() {
+            await apiCall('shuffle', {});
+            setTimeout(() => loadGuildQueue(), 500);
+        }
+
+        async function enableRadio() {
+            await apiCall('radio', {});
+            setTimeout(() => loadGuildQueue(), 1000);
+        }
+
+        async function toggleCrossfade() {
+            await apiCall('crossfade', {});
+        }
+
+        async function clearQueue() {
+            await apiCall('clear', {});
+            setTimeout(() => loadGuildQueue(), 500);
+        }
+
+        // Auto-refresh queue and status
+        setInterval(() => {
+            if (selectedGuildId) {
+                loadGuildQueue();
+            }
+        }, 5000);
+
+        setInterval(() => {
+            loadStatus();
+        }, 3000);
+    </script>
+</body>
+</html>
