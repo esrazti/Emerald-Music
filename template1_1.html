@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>âœ¦ Emerald Music âœµ Dashboard</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+            background: #0a0a0f;
+            color: #c8d0e0;
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        .starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .star {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            animation: twinkle 4s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+
+        .star.blue {
+            background: rgba(89, 152, 255, 0.4);
+            width: 2px;
+            height: 2px;
+        }
+
+        .dashboard {
+            position: relative;
+            z-index: 1;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        /* Main Layout Container */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        /* Desktop Layout - Side by Side */
+        @media (min-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 500px 1fr;
+                gap: 40px;
+                align-items: start;
+            }
+        }
+
+        .left-section {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .right-section {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: #e8ecf5;
+            text-shadow: 0 0 20px rgba(89, 152, 255, 0.3);
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header h1 .accent {
+            color: #5998ff;
+        }
+
+        .header p {
+            color: #6a7489;
+            font-size: 0.95em;
+            letter-spacing: 2px;
+        }
+
+        /* Celestial Container - Fixed Text Rotation */
+        .celestial-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 500px;
+            margin: 0 auto;
+            perspective: 1200px;
+            transform-style: preserve-3d;
+        }
+
+        .zodiac-wheel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotateX(15deg);
+            width: 100%;
+            height: 100%;
+            animation: rotate3d 180s linear infinite;
+            transform-style: preserve-3d;
+        }
+
+        @keyframes rotate3d {
+            from { transform: translate(-50%, -50%) rotateX(15deg) rotateZ(0deg); }
+            to { transform: translate(-50%, -50%) rotateX(15deg) rotateZ(360deg); }
+        }
+
+        .wheel-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 1px solid;
+            transform-style: preserve-3d;
+        }
+
+        .ring-1 {
+            width: 100%;
+            height: 100%;
+            border-color: rgba(89, 152, 255, 0.2);
+            box-shadow: 
+                0 0 30px rgba(89, 152, 255, 0.1),
+                0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .ring-2 {
+            width: 85%;
+            height: 85%;
+            border-color: rgba(200, 208, 224, 0.15);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .ring-3 {
+            width: 70%;
+            height: 70%;
+            border-color: rgba(89, 152, 255, 0.25);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .ring-4 {
+            width: 55%;
+            height: 55%;
+            border-color: rgba(200, 208, 224, 0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .wheel-line {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 1px;
+            height: 50%;
+            background: linear-gradient(to bottom, rgba(89, 152, 255, 0.2), transparent);
+            transform-origin: top center;
+        }
+
+        /* Fixed zodiac symbols - counter-rotate to stay upright */
+        .zodiac-symbol {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: rgba(15, 15, 25, 0.9);
+            border: 2px solid rgba(89, 152, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1em;
+            color: #c8d0e0;
+            transition: all 0.3s ease;
+            animation: counterRotate 180s linear infinite;
+        }
+
+        @keyframes counterRotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(-360deg); }
+        }
+
+        .zodiac-symbol:hover {
+            background: rgba(89, 152, 255, 0.2);
+            border-color: rgba(89, 152, 255, 0.6);
+            transform: scale(1.2);
+            box-shadow: 0 0 25px rgba(89, 152, 255, 0.4);
+            color: #5998ff;
+        }
+
+        .center-console {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateZ(50px);
+            width: 220px;
+            height: 220px;
+            background: radial-gradient(circle, rgba(15, 15, 25, 0.98), rgba(10, 10, 15, 0.98));
+            border: 2px solid rgba(89, 152, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                0 0 60px rgba(0, 0, 0, 0.8),
+                inset 0 0 60px rgba(10, 10, 15, 0.5),
+                0 0 30px rgba(89, 152, 255, 0.15),
+                0 30px 60px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+            transform-style: preserve-3d;
+        }
+
+        .status-indicator {
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, rgba(89, 152, 255, 0.8), rgba(89, 152, 255, 0.3));
+            border-radius: 50%;
+            margin-bottom: 15px;
+            position: relative;
+            animation: pulse 3s infinite;
+        }
+
+        .status-indicator.offline {
+            background: radial-gradient(circle, rgba(255, 89, 89, 0.8), rgba(255, 89, 89, 0.3));
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                box-shadow: 0 0 20px rgba(89, 152, 255, 0.4);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 40px rgba(89, 152, 255, 0.6);
+                transform: scale(1.08);
+            }
+        }
+
+        .status-text {
+            font-size: 1.1em;
+            color: #e8ecf5;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+            font-weight: 700;
+        }
+
+        .bot-status {
+            font-size: 0.85em;
+            color: #6a7489;
+            text-align: center;
+            padding: 0 10px;
+        }
+
+        /* Stats display below celestial wheel */
+        .stats-celestial {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        @media (min-width: 1024px) {
+            .stats-celestial {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .stat-orb {
+            position: relative;
+            text-align: center;
+            padding: 20px 15px;
+            background: rgba(15, 15, 25, 0.7);
+            border: 2px solid rgba(89, 152, 255, 0.3);
+            border-radius: 50%;
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-orb::before {
+            display: none;
+        }
+
+        .stat-orb:hover {
+            background: rgba(89, 152, 255, 0.15);
+            border-color: rgba(89, 152, 255, 0.5);
+            box-shadow: 0 0 30px rgba(89, 152, 255, 0.3);
+            transform: translateY(-3px);
+        }
+
+        .stat-orb-value {
+            font-size: 1.8em;
+            color: #5998ff;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .stat-orb-label {
+            font-size: 0.8em;
+            color: #6a7489;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        /* Control Panels */
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .control-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .control-panel {
+            background: rgba(15, 15, 25, 0.7);
+            border: 1px solid rgba(89, 152, 255, 0.2);
+            border-radius: 15px;
+            padding: 28px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            transform: translateZ(0);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-panel::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, rgba(89, 152, 255, 0.15), transparent);
+            border-radius: 15px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: -1;
+        }
+
+        .control-panel:hover::before {
+            opacity: 1;
+        }
+
+        .control-panel:hover {
+            transform: translateY(-5px) translateZ(10px);
+            border-color: rgba(89, 152, 255, 0.4);
+            box-shadow: 
+                0 12px 30px rgba(0, 0, 0, 0.5),
+                0 5px 20px rgba(89, 152, 255, 0.2);
+        }
+
+        .panel-title {
+            font-size: 1.1em;
+            color: #e8ecf5;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: 0.5px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid rgba(89, 152, 255, 0.2);
+            font-weight: 600;
+        }
+
+        .panel-icon {
+            font-size: 1.4em;
+            filter: drop-shadow(0 0 8px rgba(89, 152, 255, 0.3));
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .btn {
+            padding: 12px 16px;
+            background: rgba(20, 20, 30, 0.8);
+            border: 1px solid rgba(89, 152, 255, 0.3);
+            border-radius: 8px;
+            color: #c8d0e0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+            letter-spacing: 0px;
+            position: relative;
+            overflow: hidden;
+            transform: translateZ(0);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            font-weight: 500;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(89, 152, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.5s, height 0.5s;
+        }
+
+        .btn:hover:not(:disabled)::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn:hover:not(:disabled) {
+            border-color: rgba(89, 152, 255, 0.6);
+            box-shadow: 
+                0 0 25px rgba(89, 152, 255, 0.3),
+                0 4px 12px rgba(0, 0, 0, 0.4);
+            transform: translateY(-2px) translateZ(5px);
+            color: #e8ecf5;
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(0) translateZ(2px);
+        }
+
+        /* Enhanced Cooldown Animation */
+        .btn.cooling-down {
+            position: relative;
+            cursor: not-allowed;
+            pointer-events: none;
+            border-color: rgba(89, 152, 255, 0.5);
+        }
+
+        .btn.cooling-down::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, 
+                rgba(89, 152, 255, 0.4) 0%, 
+                rgba(89, 152, 255, 0.2) 50%, 
+                transparent 100%);
+            animation: cooldown-sweep var(--cooldown-duration) linear;
+            z-index: 1;
+        }
+
+        @keyframes cooldown-sweep {
+            from { transform: translateX(0); }
+            to { transform: translateX(100%); }
+        }
+
+        .btn.cooling-down .cooldown-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 10, 15, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+            border-radius: 10px;
+        }
+
+        .cooldown-timer {
+            font-size: 1.1em;
+            color: #5998ff;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(89, 152, 255, 0.5);
+        }
+
+        .btn span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .input-group {
+            margin: 15px 0;
+        }
+
+        .input-label {
+            display: block;
+            color: #6a7489;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+            letter-spacing: 0px;
+            font-weight: 500;
+        }
+
+        .input-field, select {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(10, 10, 15, 0.8);
+            border: 1px solid rgba(89, 152, 255, 0.3);
+            border-radius: 8px;
+            color: #c8d0e0;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus, select:focus {
+            outline: none;
+            border-color: rgba(89, 152, 255, 0.6);
+            box-shadow: 0 0 20px rgba(89, 152, 255, 0.2);
+            background: rgba(15, 15, 25, 0.9);
+        }
+
+        /* Volume Control */
+        .slider-container {
+            margin: 20px 0;
+        }
+
+        .volume-display {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .volume-value {
+            font-size: 2.2em;
+            color: #5998ff;
+            font-weight: bold;
+            text-shadow: 0 0 15px rgba(89, 152, 255, 0.3);
+        }
+
+        .slider {
+            width: 100%;
+            height: 6px;
+            background: rgba(89, 152, 255, 0.15);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: radial-gradient(circle, #5998ff, rgba(89, 152, 255, 0.7));
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(89, 152, 255, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.3);
+            box-shadow: 0 0 25px rgba(89, 152, 255, 0.7);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: radial-gradient(circle, #5998ff, rgba(89, 152, 255, 0.7));
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 15px rgba(89, 152, 255, 0.5);
+        }
+
+        /* Queue List */
+        .queue-list {
+            max-height: 350px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .queue-item {
+            padding: 14px 16px;
+            background: rgba(89, 152, 255, 0.04);
+            border-left: 3px solid rgba(89, 152, 255, 0.3);
+            margin-bottom: 10px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .queue-item:hover {
+            background: rgba(89, 152, 255, 0.1);
+            border-left-color: rgba(89, 152, 255, 0.7);
+            transform: translateX(5px);
+            box-shadow: -3px 0 15px rgba(89, 152, 255, 0.15);
+        }
+
+        .queue-item-title {
+            color: #e8ecf5;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .queue-item-info {
+            color: #6a7489;
+            font-size: 0.85em;
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 26px;
+            background: rgba(15, 15, 25, 0.97);
+            border: 2px solid rgba(89, 152, 255, 0.4);
+            border-radius: 12px;
+            color: #c8d0e0;
+            z-index: 1000;
+            animation: slideIn 0.4s ease;
+            box-shadow: 
+                0 8px 30px rgba(0, 0, 0, 0.6),
+                0 0 20px rgba(89, 152, 255, 0.2);
+            backdrop-filter: blur(10px);
+            max-width: 300px;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .connection-error {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 89, 89, 0.95);
+            border: 2px solid rgba(255, 89, 89, 0.5);
+            border-radius: 12px;
+            padding: 15px 30px;
+            color: #fff;
+            z-index: 1001;
+            display: none;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: #6a7489;
+            font-size: 0.85em;
+            letter-spacing: 1px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(10, 10, 15, 0.5);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(89, 152, 255, 0.3);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(89, 152, 255, 0.5);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 1023px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-celestial {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 15px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                padding: 20px 15px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+                letter-spacing: 2px;
+            }
+
+            .header p {
+                font-size: 0.85em;
+            }
+
+            .celestial-container {
+                max-width: 350px;
+                height: 350px;
+            }
+
+            .center-console {
+                width: 160px;
+                height: 160px;
+            }
+
+            .status-indicator {
+                width: 40px;
+                height: 40px;
+            }
+
+            .status-text {
+                font-size: 1em;
+            }
+
+            .bot-status {
+                font-size: 0.75em;
+            }
+
+            .zodiac-symbol {
+                width: 32px;
+                height: 32px;
+                font-size: 0.9em;
+            }
+
+            .stats-celestial {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+
+            .control-grid {
+                grid-template-columns: 1fr;
+                gap: 18px;
+            }
+
+            .control-panel {
+                padding: 22px;
+            }
+
+            .panel-title {
+                font-size: 1.05em;
+            }
+
+            .btn-group {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .notification {
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+
+            .connection-error {
+                left: 10px;
+                right: 10px;
+                transform: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .celestial-container {
+                max-width: 280px;
+                height: 280px;
+            }
+
+            .center-console {
+                width: 140px;
+                height: 140px;
+            }
+
+            .header h1 {
+                font-size: 1.6em;
+            }
+
+            .stats-celestial {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .stat-orb-value {
+                font-size: 1.3em;
+            }
+
+            .stat-orb-label {
+                font-size: 0.7em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="starfield" id="starfield"></div>
+    <div class="connection-error" id="connectionError">
+        âš ï¸ Cannot connect to server. Make sure the bot is running.
+    </div>
+
+    <div class="dashboard">
+        <div class="header">
+            <h1>âœ¦ EMERALD <span class="accent">MUSIC</span> âœµ</h1>
+            <p>EMERALD MUSIC CONTROL DASHBOARD</p>
+        </div>
+
+        <div class="main-layout">
+            <!-- LEFT SECTION: Celestial Wheel + Stats -->
+            <div class="left-section">
+                <!-- Celestial Status Display -->
+                <div class="celestial-container">
+                    <div class="zodiac-wheel">
+                        <div class="wheel-ring ring-1"></div>
+                        <div class="wheel-ring ring-2"></div>
+                        <div class="wheel-ring ring-3"></div>
+                        <div class="wheel-ring ring-4"></div>
+                        
+                        <div class="wheel-line" style="transform: translate(-50%, -100%) rotate(0deg);"></div>
+                        <div class="wheel-line" style="transform: translate(-50%, -100%) rotate(45deg);"></div>
+                        <div class="wheel-line" style="transform: translate(-50%, -100%) rotate(90deg);"></div>
+                        <div class="wheel-line" style="transform: translate(-50%, -100%) rotate(135deg);"></div>
+                        
+                        <!-- Zodiac symbols with fixed text (counter-rotating) -->
+                        <div class="zodiac-symbol" style="top: 5%; left: 50%; transform: translate(-50%, -50%);">E</div>
+                        <div class="zodiac-symbol" style="top: 15%; left: 85%; transform: translate(-50%, -50%);">M</div>
+                        <div class="zodiac-symbol" style="top: 50%; left: 95%; transform: translate(-50%, -50%);">E</div>
+                        <div class="zodiac-symbol" style="top: 85%; left: 85%; transform: translate(-50%, -50%);">R</div>
+                        <div class="zodiac-symbol" style="top: 95%; left: 50%; transform: translate(-50%, -50%);">A</div>
+                        <div class="zodiac-symbol" style="top: 85%; left: 15%; transform: translate(-50%, -50%);">L</div>
+                        <div class="zodiac-symbol" style="top: 50%; left: 5%; transform: translate(-50%, -50%);">D</div>
+                        <div class="zodiac-symbol" style="top: 15%; left: 15%; transform: translate(-50%, -50%);">âœ¦</div>
+                    </div>
+
+                    <div class="center-console">
+                        <div class="status-indicator" id="statusIndicator"></div>
+                        <div class="status-text" id="statusText">CONNECTING</div>
+                        <div class="bot-status" id="botStatus">Initializing...</div>
+                    </div>
+                </div>
+
+                <!-- Celestial Stats -->
+                <div class="stats-celestial">
+                    <div class="stat-orb">
+                        <div class="stat-orb-value" id="serverCount">NA</div>
+                        <div class="stat-orb-label">SERVERS</div>
+                    </div>
+                    <div class="stat-orb">
+                        <div class="stat-orb-value" id="sessionCount">NA</div>
+                        <div class="stat-orb-label">SESSIONS</div>
+                    </div>
+                    <div class="stat-orb">
+                        <div class="stat-orb-value" id="queueSize">NA</div>
+                        <div class="stat-orb-label">QUEUE</div>
+                    </div>
+                    <div class="stat-orb">
+                        <div class="stat-orb-value" id="uptime">&h &m</div>
+                        <div class="stat-orb-label">UPTIME</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT SECTION: Control Panels -->
+            <div class="right-section">
+                <div class="control-grid">
+            <!-- Guild Selector -->
+            <div class="control-panel">
+                <div class="panel-title">
+                    <span class="panel-icon">ðŸŽ›ï¸</span>
+                    SERVER SELECTION
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Active Server</label>
+                    <select id="guildSelect" onchange="selectGuild()">
+                        <option value="">Select a server...</option>
+                    </select>
+                </div>
+                <div class="input-label" style="margin-top: 15px; text-align: center;">
+                    Guild ID: <strong style="color: #5998ff;" id="selectedGuildId">None</strong>
+                </div>
+            </div>
+
+            <!-- Music Control -->
+            <div class="control-panel">
+                <div class="panel-title">
+                    <span class="panel-icon">ðŸŽµ</span>
+                    MUSIC CONTROL
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Song / URL</label>
+                    <input type="text" class="input-field" id="songInput" placeholder="Enter song name or YouTube URL">
+                </div>
+                <div class="btn-group">
+                    <button class="btn" onclick="playMusic()"><span>â–¶ï¸ Play</span></button>
+                    <button class="btn" onclick="pauseMusic()"><span>â¸ï¸ Pause</span></button>
+                    <button class="btn" onclick="skipSong()"><span>â­ï¸ Skip</span></button>
+                    <button class="btn" onclick="stopMusic()"><span>â¹ï¸ Stop</span></button>
+                </div>
+            </div>
+
+            <!-- Volume Control -->
+            <div class="control-panel">
+                <div class="panel-title">
+                    <span class="panel-icon">ðŸ”Š</span>
+                    VOLUME CONTROL
+                </div>
+                <div class="slider-container">
+                    <div class="volume-display">
+                        <span class="volume-value" id="volumeValue">40%</span>
+                    </div>
+                    <input type="range" class="slider" id="volumeSlider" min="0" max="100" value="40" oninput="updateVolume(this.value)">
+                </div>
+                <div class="btn-group" style="margin-top: 25px;">
+                    <button class="btn" onclick="setVolume(10)"><span>ðŸ”‰ 10%</span></button>
+                    <button class="btn" onclick="setVolume(40)"><span>ðŸ”Š 40%(Default)</span></button>
+                    <button class="btn" onclick="setVolume(60)"><span>ðŸ”Š 60%</span></button>
+                    <button class="btn" onclick="setVolume(100)"><span>ðŸ”Š 100%</span></button>
+                </div>
+            </div>
+
+            <!-- Loop & Shuffle -->
+            <div class="control-panel">
+                <div class="panel-title">
+                    <span class="panel-icon">ðŸ”</span>
+                    PLAYBACK MODES
+                </div>
+                <div class="input-label">Loop Mode</div>
+                <div class="btn-group">
+                    <button class="btn" onclick="setLoop('off')"><span>âž¡ï¸ Off</span></button>
+                    <button class="btn" onclick="setLoop('song')"><span>ðŸ”‚ Song</span></button>
+                    <button class="btn" onclick="setLoop('queue')"><span>ðŸ” Queue</span></button>
+                    <button class="btn" onclick="setLoop('random')"><span>ðŸ”€ Random</span></button>
+                </div>
+                <div class="input-label" style="margin-top: 20px;">Queue Actions</div>
+                <div class="btn-group">
+                    <button class="btn" onclick="shuffleQueue()"><span>ðŸ”€ Shuffle</span></button>
+                    <button class="btn" onclick="enableRadio()"><span>ðŸ“» Radio</span></button>
+                    <button class="btn" onclick="toggleCrossfade()"><span>ðŸŽµ Crossfade</span></button>
+                    <button class="btn" onclick="clearQueue()"><span>ðŸ—‘ï¸ Clear</span></button>
+                </div>
+            </div>
+
+            <!-- Queue -->
+            <div class="control-panel" style="grid-column: span 2;">
+                <div class="panel-title">
+                    <span class="panel-icon">ðŸ“œ</span>
+                    CURRENT QUEUE
+                </div>
+                <div class="queue-list" id="queueList">
+                    <div class="queue-item">
+                        <div class="queue-item-title">No songs in queue</div>
+                        <div class="queue-item-info">Add songs using the music control panel</div>
+                    </div>
+                </div>
+            </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            âœ¦ EMERALD MUSIC âœµ ã‚¨ãƒ¡ãƒ©ãƒ«ãƒ‰ã€€ãƒŸãƒ¥ãƒ¼ã‚¸ãƒƒã‚¯ âœ¦
+        </div>
+    </div>
+
+    <script>
+        // WebSocket connection
+        const socket = io(window.location.origin, {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionAttempts: 5,
+            timeout: 10000
+        });
+        let selectedGuildId = null;
+        
+        // Spam protection
+        const buttonCooldowns = new Map();
+        const COOLDOWN_MS = 2500;
+        
+        // Enhanced button disable with better visual feedback
+        function disableButton(buttonElement, duration) {
+            buttonElement.disabled = true;
+            buttonElement.classList.add('cooling-down');
+            buttonElement.style.setProperty('--cooldown-duration', duration + 'ms');
+            
+            // Create cooldown overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'cooldown-overlay';
+            const timer = document.createElement('span');
+            timer.className = 'cooldown-timer';
+            overlay.appendChild(timer);
+            buttonElement.appendChild(overlay);
+            
+            let remaining = Math.ceil(duration / 1000);
+            timer.textContent = `${remaining}s`;
+            
+            const interval = setInterval(() => {
+                remaining--;
+                if (remaining > 0) {
+                    timer.textContent = `${remaining}s`;
+                } else {
+                    clearInterval(interval);
+                    buttonElement.disabled = false;
+                    buttonElement.classList.remove('cooling-down');
+                    overlay.remove();
+                }
+            }, 1000);
+        }
+        
+        function getButtonByAction(actionName) {
+            const buttons = document.querySelectorAll('.btn');
+            for (const btn of buttons) {
+                const onclick = btn.getAttribute('onclick');
+                if (onclick && onclick.includes(actionName)) {
+                    return btn;
+                }
+            }
+            return null;
+        }
+
+        // Generate starfield
+        const starfield = document.getElementById('starfield');
+        for (let i = 0; i < 150; i++) {
+            const star = document.createElement('div');
+            star.className = i % 10 === 0 ? 'star blue' : 'star';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            star.style.animationDelay = Math.random() * 4 + 's';
+            starfield.appendChild(star);
+        }
+
+        // Socket event handlers
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            document.getElementById('connectionError').style.display = 'none';
+            updateStatus('ONLINE', 'Connected');
+            loadGuilds();
+            loadStatus();
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+            updateStatus('OFFLINE', 'Disconnected');
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
+            document.getElementById('connectionError').style.display = 'block';
+            updateStatus('OFFLINE', 'Connection Error');
+        });
+
+        socket.on('status_update', (data) => {
+            updateDashboard(data);
+        });
+
+        socket.on('error', (data) => {
+            showNotification('âŒ Error: ' + data.message);
+        });
+
+        function updateStatus(status, message) {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            const botStatus = document.getElementById('botStatus');
+
+            statusText.textContent = status;
+            botStatus.textContent = message;
+
+            if (status === 'ONLINE') {
+                indicator.classList.remove('offline');
+            } else {
+                indicator.classList.add('offline');
+            }
+        }
+
+        async function loadGuilds() {
+            try {
+                const response = await fetch('/api/guilds');
+                const data = await response.json();
+                
+                const select = document.getElementById('guildSelect');
+                select.innerHTML = '<option value="">Select a server...</option>';
+                
+                data.guilds.forEach(guild => {
+                    const option = document.createElement('option');
+                    option.value = guild.id;
+                    option.textContent = `${guild.name} ${guild.has_session ? 'ðŸŽµ' : ''}`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Failed to load guilds:', error);
+                showNotification('âŒ Failed to load servers');
+            }
+        }
+
+        async function loadStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                updateDashboard(data);
+            } catch (error) {
+                console.error('Failed to load status:', error);
+            }
+        }
+
+        function updateDashboard(data) {
+            if (data.servers !== undefined) {
+                document.getElementById('serverCount').textContent = data.servers;
+            }
+            if (data.sessions !== undefined) {
+                document.getElementById('sessionCount').textContent = data.sessions;
+            }
+            if (data.uptime) {
+                document.getElementById('uptime').textContent = data.uptime;
+            }
+
+            if (selectedGuildId && data.sessions_data) {
+                const sessionData = data.sessions_data.find(s => s.guild_id == selectedGuildId);
+                if (sessionData) {
+                    document.getElementById('queueSize').textContent = sessionData.queue_size || 0;
+                    if (sessionData.volume !== undefined) {
+                        document.getElementById('volumeSlider').value = sessionData.volume;
+                        document.getElementById('volumeValue').textContent = sessionData.volume + '%';
+                    }
+                }
+            }
+        }
+
+        function selectGuild() {
+            const select = document.getElementById('guildSelect');
+            selectedGuildId = select.value;
+            document.getElementById('selectedGuildId').textContent = selectedGuildId || 'None';
+            
+            if (selectedGuildId) {
+                loadGuildQueue();
+            }
+        }
+
+        async function loadGuildQueue() {
+            if (!selectedGuildId) return;
+            
+            try {
+                const response = await fetch(`/api/session/${selectedGuildId}`);
+                const data = await response.json();
+                
+                const queueList = document.getElementById('queueList');
+                queueList.innerHTML = '';
+                
+                if (data.current_song) {
+                    const currentItem = document.createElement('div');
+                    currentItem.className = 'queue-item';
+                    currentItem.style.borderLeftColor = '#5998ff';
+                    currentItem.innerHTML = `
+                        <div class="queue-item-title">â–¶ï¸ ${data.current_song.title}</div>
+                        <div class="queue-item-info">${data.current_song.uploader}</div>
+                    `;
+                    queueList.appendChild(currentItem);
+                }
+                
+                if (data.queue && data.queue.length > 0) {
+                    data.queue.forEach(song => {
+                        const item = document.createElement('div');
+                        item.className = 'queue-item';
+                        const status = song.is_downloaded ? 'âœ…' : 'â³';
+                        item.innerHTML = `
+                            <div class="queue-item-title">${status} ${song.position}. ${song.title}</div>
+                            <div class="queue-item-info">${song.uploader}</div>
+                        `;
+                        queueList.appendChild(item);
+                    });
+                } else if (!data.current_song) {
+                    queueList.innerHTML = `
+                        <div class="queue-item">
+                            <div class="queue-item-title">No songs in queue</div>
+                            <div class="queue-item-info">Add songs using the music control panel</div>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('queueSize').textContent = data.queue_size || 0;
+            } catch (error) {
+                console.error('Failed to load queue:', error);
+            }
+        }
+
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        async function apiCall(endpoint, data = {}, buttonAction = null) {
+            if (!selectedGuildId) {
+                showNotification('âš ï¸ Please select a server first');
+                return;
+            }
+            
+            const now = Date.now();
+            const lastCall = buttonCooldowns.get(endpoint) || 0;
+            const timeSinceLastCall = now - lastCall;
+            
+            if (timeSinceLastCall < COOLDOWN_MS) {
+                return;
+            }
+            
+            buttonCooldowns.set(endpoint, now);
+            
+            if (buttonAction) {
+                const button = getButtonByAction(buttonAction);
+                if (button) {
+                    disableButton(button, COOLDOWN_MS);
+                }
+            }
+            
+            try {
+                const response = await fetch(`/api/${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ ...data, guild_id: selectedGuildId })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showNotification('âœ… Success!');
+                    if (endpoint === 'play') {
+                        setTimeout(() => loadGuildQueue(), 1000);
+                    }
+                } else {
+                    showNotification('âŒ ' + (result.error || 'Unknown error'));
+                }
+                
+                return result;
+            } catch (error) {
+                showNotification('âŒ Connection error');
+                console.error('API call failed:', error);
+            }
+        }
+
+        async function playMusic() {
+            const song = document.getElementById('songInput').value;
+            if (!song) {
+                showNotification('âš ï¸ Please enter a song name or URL');
+                return;
+            }
+            await apiCall('play', { search: song }, 'playMusic');
+            document.getElementById('songInput').value = '';
+        }
+
+        async function pauseMusic() {
+            await apiCall('pause', {}, 'pauseMusic');
+        }
+
+        async function resumeMusic() {
+            await apiCall('resume', {}, 'resumeMusic');
+        }
+
+        async function skipSong() {
+            await apiCall('skip', {}, 'skipSong');
+            setTimeout(() => loadGuildQueue(), 500);
+        }
+
+        async function stopMusic() {
+            await apiCall('stop', {}, 'stopMusic');
+            setTimeout(() => loadGuildQueue(), 500);
+        }
+
+        function updateVolume(value) {
+            document.getElementById('volumeValue').textContent = value + '%';
+        }
+
+        async function setVolume(value) {
+            const now = Date.now();
+            const lastCall = buttonCooldowns.get('volume-button') || 0;
+            if (now - lastCall < COOLDOWN_MS) {
+                return;
+            }
+            buttonCooldowns.set('volume-button', now);
+            
+            const volumeButtons = document.querySelectorAll('.btn[onclick^="setVolume"]');
+            volumeButtons.forEach(btn => disableButton(btn, COOLDOWN_MS));
+            
+            document.getElementById('volumeSlider').value = value;
+            updateVolume(value);
+            await apiCall('volume', { volume: value });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const slider = document.getElementById('volumeSlider');
+            slider.addEventListener('change', async (e) => {
+                await apiCall('volume', { volume: e.target.value });
+            });
+        });
+
+        async function setLoop(mode) {
+            await apiCall('loop', { mode: mode }, 'setLoop');
+        }
+
+        async function shuffleQueue() {
+            await apiCall('shuffle', {}, 'shuffleQueue');
+            setTimeout(() => loadGuildQueue(), 500);
+        }
+
+        async function enableRadio() {
+            await apiCall('radio', {}, 'enableRadio');
+            setTimeout(() => loadGuildQueue(), 1000);
+        }
+
+        async function toggleCrossfade() {
+            await apiCall('crossfade', {}, 'toggleCrossfade');
+        }
+
+        async function clearQueue() {
+            await apiCall('clear', {}, 'clearQueue');
+            setTimeout(() => loadGuildQueue(), 500);
+        }
+
+        setInterval(() => {
+            if (selectedGuildId) {
+                loadGuildQueue();
+            }
+        }, 5000);
+
+        setInterval(() => {
+            loadStatus();
+        }, 3000);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const songInput = document.getElementById('songInput');
+            songInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    playMusic();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
