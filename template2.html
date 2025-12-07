@@ -76,8 +76,13 @@
             font-size: 1.5em;
             font-weight: 700;
             letter-spacing: 2px;
-            color: #5998ff;
-            text-shadow: 0 0 20px rgba(89, 152, 255, 0.4);
+            color: #e8ecf5;
+            text-shadow: 0 0 20px rgba(142, 255, 170, 0.4);
+        }
+
+        .logo .emerald {
+            color: #8effaa;
+            text-shadow: 0 0 20px rgba(142, 255, 170, 0.6);
         }
 
         .server-selector {
@@ -261,6 +266,67 @@
         .search-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(89, 152, 255, 0.6);
+        }
+
+        .search-result-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(89, 152, 255, 0.05);
+            border: 1px solid rgba(89, 152, 255, 0.2);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .search-result-item:hover {
+            background: rgba(89, 152, 255, 0.15);
+            border-color: #5998ff;
+            transform: translateX(5px);
+        }
+
+        .search-result-thumbnail {
+            width: 120px;
+            height: 68px;
+            background: rgba(89, 152, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .search-result-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .search-result-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        .search-result-title {
+            color: #e8ecf5;
+            font-weight: 500;
+            margin-bottom: 4px;
+            font-size: 0.95em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .search-result-channel {
+            color: #c8d0e0;
+            font-size: 0.85em;
+            margin-bottom: 2px;
+        }
+
+        .search-result-duration {
+            color: #6a7489;
+            font-size: 0.8em;
         }
 
         /* Playback Controls */
@@ -599,7 +665,7 @@
     <div class="app-container">
         <!-- Top Navigation -->
         <div class="top-nav">
-            <div class="logo">✦ EMERALD MUSIC ✵</div>
+            <div class="logo">✦ <span class="emerald">EMERALD</span> MUSIC ✵</div>
             
             <div class="server-selector">
                 <label>Server:</label>
@@ -648,8 +714,14 @@
                 <div class="search-section">
                     <div class="section-title">🔍 Search Music</div>
                     <div class="search-bar">
-                        <input type="text" class="search-input" id="searchInput" placeholder="Search for songs, artists, or paste YouTube URL...">
-                        <button class="search-btn" onclick="playMusic()">Play</button>
+                        <input type="text" class="search-input" id="searchInput" placeholder="Search YouTube or paste URL...">
+                        <button class="search-btn" onclick="searchYouTube()">Search</button>
+                    </div>
+                    
+                    <!-- Search Results -->
+                    <div id="searchResults" style="margin-top: 15px; display: none;">
+                        <div style="color: #c8d0e0; font-size: 0.9em; margin-bottom: 10px;">Search Results:</div>
+                        <div id="searchResultsList" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;"></div>
                     </div>
                 </div>
 
@@ -946,14 +1018,92 @@
             }
         }
 
+        async function searchYouTube() {
+            const query = document.getElementById('searchInput').value;
+            if (!query) {
+                showNotification('⚠️ Please enter a search term');
+                return;
+            }
+
+            // Check if it's a URL
+            if (query.includes('youtube.com') || query.includes('youtu.be')) {
+                playMusicDirect(query);
+                return;
+            }
+
+            showNotification('🔍 Searching YouTube...');
+            
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.results && data.results.length > 0) {
+                    displaySearchResults(data.results);
+                } else {
+                    showNotification('❌ No results found');
+                }
+            } catch (error) {
+                console.error('Search failed:', error);
+                showNotification('❌ Search failed. Try playing directly.');
+                // Fallback to direct play
+                playMusicDirect(query);
+            }
+        }
+
+        function displaySearchResults(results) {
+            const resultsContainer = document.getElementById('searchResults');
+            const resultsList = document.getElementById('searchResultsList');
+            
+            resultsList.innerHTML = '';
+            
+            results.forEach((result, index) => {
+                const item = document.createElement('div');
+                item.className = 'search-result-item';
+                item.onclick = () => playMusicDirect(result.url || result.id);
+                
+                item.innerHTML = `
+                    <div class="search-result-thumbnail">
+                        ${result.thumbnail ? `<img src="${result.thumbnail}" alt="${result.title}">` : '🎵'}
+                    </div>
+                    <div class="search-result-info">
+                        <div class="search-result-title">${result.title}</div>
+                        <div class="search-result-channel">${result.channel || result.uploader || 'Unknown'}</div>
+                        <div class="search-result-duration">${result.duration || ''}</div>
+                    </div>
+                `;
+                
+                resultsList.appendChild(item);
+            });
+            
+            resultsContainer.style.display = 'block';
+            showNotification(`✅ Found ${results.length} results`);
+        }
+
+        async function playMusicDirect(searchQuery) {
+            if (!selectedGuildId) {
+                showNotification('⚠️ Please select a server first');
+                return;
+            }
+            
+            await apiCall('play', { search: searchQuery });
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchResults').style.display = 'none';
+        }
+
         async function playMusic() {
             const song = document.getElementById('searchInput').value;
             if (!song) {
                 showNotification('⚠️ Please enter a song name or URL');
                 return;
             }
-            await apiCall('play', { search: song });
-            document.getElementById('searchInput').value = '';
+            await playMusicDirect(song);
         }
 
         async function togglePlayPause() {
@@ -998,7 +1148,7 @@
             const searchInput = document.getElementById('searchInput');
             searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
-                    playMusic();
+                    searchYouTube();
                 }
             });
         });
