@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✦ Emerald Music ✵ Dashboard</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cinzel', 'Georgia', serif;
+            background: #0a0a0f;
+            color: #c8d0e0;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .star {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            animation: twinkle 4s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+
+        .star.blue {
+            background: rgba(89, 152, 255, 0.4);
+            width: 2px;
+            height: 2px;
+        }
+
+        .dashboard {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            color: #e8ecf5;
+            text-shadow: 0 0 20px rgba(89, 152, 255, 0.2);
+            letter-spacing: 6px;
+            margin-bottom: 10px;
+        }
+
+        .header h1 .accent {
+            color: #5998ff;
+        }
+
+        .header p {
+            color: #6a7489;
+            font-size: 1.1em;
+            letter-spacing: 3px;
+        }
+
+        .celestial-container {
+            position: relative;
+            width: 600px;
+            height: 600px;
+            margin: 0 auto 80px;
+            perspective: 1200px;
+            transform-style: preserve-3d;
+        }
+
+        .zodiac-wheel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotateX(15deg);
+            width: 100%;
+            height: 100%;
+            animation: rotate3d 180s linear infinite;
+            transform-style: preserve-3d;
+        }
+
+        @keyframes rotate3d {
+            from { transform: translate(-50%, -50%) rotateX(15deg) rotateZ(0deg); }
+            to { transform: translate(-50%, -50%) rotateX(15deg) rotateZ(360deg); }
+        }
+
+        .wheel-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 1px solid;
+            transform-style: preserve-3d;
+        }
+
+        .ring-1 {
+            width: 100%;
+            height: 100%;
+            border-color: rgba(89, 152, 255, 0.15);
+            box-shadow: 
+                0 0 30px rgba(89, 152, 255, 0.05),
+                0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .ring-2 {
+            width: 85%;
+            height: 85%;
+            border-color: rgba(200, 208, 224, 0.1);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .ring-3 {
+            width: 70%;
+            height: 70%;
+            border-color: rgba(89, 152, 255, 0.2);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .ring-4 {
+            width: 55%;
+            height: 55%;
+            border-color: rgba(200, 208, 224, 0.08);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .wheel-line {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 1px;
+            height: 50%;
+            background: linear-gradient(to bottom, rgba(89, 152, 255, 0.2), transparent);
+            transform-origin: top center;
+        }
+
+        .center-console {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateZ(50px);
+            width: 280px;
+            height: 280px;
+            background: radial-gradient(circle, rgba(15, 15, 25, 0.98), rgba(10, 10, 15, 0.98));
+            border: 2px solid rgba(89, 152, 255, 0.25);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                0 0 60px rgba(0, 0, 0, 0.8),
+                inset 0 0 60px rgba(10, 10, 15, 0.5),
+                0 0 30px rgba(89, 152, 255, 0.1),
+                0 30px 60px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+            transform-style: preserve-3d;
+        }
+
+        .status-indicator {
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, rgba(89, 152, 255, 0.8), rgba(89, 152, 255, 0.3));
+            border-radius: 50%;
+            margin-bottom: 20px;
+            position: relative;
+            animation: pulse 3s infinite;
+        }
+
+        .status-indicator.offline {
+            background: radial-gradient(circle, rgba(255, 89, 89, 0.8), rgba(255, 89, 89, 0.3));
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                box-shadow: 0 0 15px rgba(89, 152, 255, 0.3);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 30px rgba(89, 152, 255, 0.5);
+                transform: scale(1.05);
+            }
+        }
+
+        .status-text {
+            font-size: 1.2em;
+            color: #c8d0e0;
+            margin-bottom: 5px;
+            letter-spacing: 3px;
+        }
+
+        .bot-status {
+            font-size: 0.9em;
+            color: #6a7489;
+        }
+
+        .zodiac-symbol {
+            position: absolute;
+            width: 35px;
+            height: 35px;
+            background: rgba(15, 15, 25, 0.8);
+            border: 1px solid rgba(89, 152, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1em;
+            color: #c8d0e0;
+            transition: all 0.3s ease;
+        }
+
+        .zodiac-symbol:hover {
+            background: rgba(89, 152, 255, 0.15);
+            border-color: rgba(89, 152, 255, 0.5);
+            transform: scale(1.15);
+            box-shadow: 0 0 20px rgba(89, 152, 255, 0.3);
+            color: #5998ff;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .control-panel {
+            background: rgba(15, 15, 25, 0.6);
+            border: 1px solid rgba(89, 152, 255, 0.15);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            transform: translateZ(0);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-panel::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, rgba(89, 152, 255, 0.15), transparent);
+            border-radius: 15px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: -1;
+        }
+
+        .control-panel:hover::before {
+            opacity: 1;
+        }
+
+        .control-panel:hover {
+            transform: translateY(-8px) translateZ(10px);
+            border-color: rgba(89, 152, 255, 0.3);
+            box-shadow: 
+                0 15px 35px rgba(0, 0, 0, 0.5),
+                0 5px 15px rgba(89, 152, 255, 0.2);
+        }
+
+        .panel-title {
+            font-size: 1.4em;
+            color: #e8ecf5;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: 2px;
+        }
+
+        .panel-icon {
+            font-size: 1.3em;
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            background: rgba(20, 20, 30, 0.8);
+            border: 1px solid rgba(89, 152, 255, 0.2);
+            border-radius: 8px;
+            color: #c8d0e0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.95em;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+            transform: translateZ(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(89, 152, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.5s, height 0.5s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn:hover {
+            border-color: rgba(89, 152, 255, 0.5);
+            box-shadow: 
+                0 0 20px rgba(89, 152, 255, 0.2),
+                0 4px 8px rgba(0, 0, 0, 0.3);
+            transform: translateY(-2px) translateZ(5px);
+            color: #e8ecf5;
+        }
+
+        .btn:active {
+            transform: translateY(0) translateZ(2px);
+            box-shadow: 
+                0 0 15px rgba(89, 152, 255, 0.15),
+                0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .btn.cooling-down {
+            opacity: 0.6;
+            cursor: not-allowed;
+            pointer-events: none;
+            position: relative;
+        }
+
+        .btn.cooling-down::after {
+            content: attr(data-cooldown);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8em;
+            color: #5998ff;
+            font-weight: bold;
+            z-index: 2;
+        }
+
+        .btn span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .input-group {
+            margin: 15px 0;
+        }
+
+        .input-label {
+            display: block;
+            color: #6a7489;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            letter-spacing: 1px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px;
+            background: rgba(10, 10, 15, 0.8);
+            border: 1px solid rgba(89, 152, 255, 0.2);
+            border-radius: 8px;
+            color: #c8d0e0;
+            font-size: 0.95em;
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: rgba(89, 152, 255, 0.5);
+            box-shadow: 0 0 15px rgba(89, 152, 255, 0.15);
+            background: rgba(15, 15, 25, 0.8);
+        }
+
+        .slider-container {
+            margin: 20px 0;
+        }
+
+        .slider {
+            width: 100%;
+            height: 4px;
+            background: rgba(89, 152, 255, 0.15);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: rgba(89, 152, 255, 0.8);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(89, 152, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: #5998ff;
+            box-shadow: 0 0 20px rgba(89, 152, 255, 0.5);
+        }
+
+        .slider-value {
+            text-align: center;
+            color: #c8d0e0;
+            margin-top: 10px;
+            font-size: 1.1em;
+        }
+
+        .queue-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .queue-item {
+            padding: 12px;
+            background: rgba(89, 152, 255, 0.03);
+            border-left: 2px solid rgba(89, 152, 255, 0.3);
+            margin-bottom: 10px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            transform: translateZ(0);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .queue-item:hover {
+            background: rgba(89, 152, 255, 0.08);
+            border-left-color: rgba(89, 152, 255, 0.6);
+            transform: translateX(5px) translateZ(3px);
+            box-shadow: 
+                0 3px 8px rgba(0, 0, 0, 0.15),
+                -2px 0 10px rgba(89, 152, 255, 0.1);
+        }
+
+        .queue-item-title {
+            color: #e8ecf5;
+            margin-bottom: 5px;
+        }
+
+        .queue-item-info {
+            color: #6a7489;
+            font-size: 0.85em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            padding: 15px;
+            background: rgba(89, 152, 255, 0.05);
+            border: 1px solid rgba(89, 152, 255, 0.1);
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.3s ease;
+            transform: translateZ(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-box:hover {
+            background: rgba(89, 152, 255, 0.1);
+            border-color: rgba(89, 152, 255, 0.2);
+            transform: translateY(-3px) translateZ(5px);
+            box-shadow: 
+                0 5px 15px rgba(0, 0, 0, 0.2),
+                0 0 10px rgba(89, 152, 255, 0.1);
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            color: #c8d0e0;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #6a7489;
+            font-size: 0.85em;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: #6a7489;
+            font-size: 0.9em;
+            letter-spacing: 2px;
+        }
+
+        .guild-selector {
+            margin-bottom: 20px;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(10, 10, 15, 0.8);
+            border: 1px solid rgba(89, 152, 255, 0.2);
+            border-radius: 8px;
+            color: #c8d0e0;
+            font-size: 0.95em;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: rgba(89, 152, 255, 0.5);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: rgba(15, 15, 25, 0.95);
+            border: 1px solid rgba(89, 152, 255, 0.3);
+            border-radius: 8px;
+            color: #c8d0e0;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .connection-error {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 89, 89, 0.95);
+            border: 1px solid rgba(255, 89, 89, 0.5);
+            border-radius: 8px;
+            padding: 15px 30px;
+            color: #fff;
+            z-index: 1001;
+            display: none;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(10, 10, 15, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(89, 152, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(89, 152, 255, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .celestial-container {
+                width: 400px;
+                height: 400px;
+            }
+
+            .center-console {
+                width: 200px;
+                height: 200px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .control-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="starfield" id="starfield"></div>
+    <div class="connection-error" id="connectionError">
+        ⚠️ Cannot connect to server. Make sure the bot is running.
+    </div>
+
+    <div class="dashboard">
+        <div class="header">
+            <h1>✦ EMERALD <span class="accent">MUSIC</span> ✵</h1>
+            <p>CELESTIAL CONTROL DASHBOARD</p>
+        </div>
+
+        <div class="celestial-container">
+            <div class="zodiac-wheel">
+                <div class="wheel-ring ring-1"></div>
+                <div class="wheel-ring ring-2"></div>
+                <div class="wheel-ring ring-3"></div>
+                <div class="wheel-ring ring-4"></div>
+                
+                <div class="wheel-line" style="transform: translate(-50%, -100%) rotate(0deg);"></div>
+                <div class="wheel-line" style="transform: translate(-50%, -100%) rotate(45deg);"></div>
+                <div class="wheel-line" style="transform: translate(-50%, -100%) rotate(90deg);"></div>
+                <div class="wheel-line" style="transform: translate(-50%, -100%) rotate(135deg);"></div>
+                
+                <div class="zodiac-symbol" style="top: 5%; left: 50%; transform: translate(-50%, -50%) rotateZ(0deg);" data-angle="0">
+                    <span style="display: block; transform: rotateZ(0deg);">I</span>
+                </div>
+                <div class="zodiac-symbol" style="top: 15%; left: 85%; transform: translate(-50%, -50%) rotateZ(45deg);" data-angle="45">
+                    <span style="display: block; transform: rotateZ(-45deg);">II</span>
+                </div>
+                <div class="zodiac-symbol" style="top: 50%; left: 95%; transform: translate(-50%, -50%) rotateZ(90deg);" data-angle="90">
+                    <span style="display: block; transform: rotateZ(-90deg);">III</span>
+                </div>
+                <div class="zodiac-symbol" style="top: 85%; left: 85%; transform: translate(-50%, -50%) rotateZ(135deg);" data-angle="135">
+                    <span style="display: block; transform: rotateZ(-135deg);">IV</span>
+                </div>
+                <div class="zodiac-symbol" style="top: 95%; left: 50%; transform: translate(-50%, -50%) rotateZ(180deg);" data-angle="180">
+                    <span style="display: block; transform: rotateZ(-180deg);">V</span>
+                </div>
+                <div class="zodiac-symbol" style="top: 85%; left: 15%; transform: translate(-50%, -50%) rotateZ(225deg);" data-angle="225">
+                    <span style="display: block; transform: rotateZ(-225deg);">VI</span>
+                </div>
+                <div class="zodiac-symbol" style="top: 50%; left: 5%; transform: translate(-50%, -50%) rotateZ(270deg);" data-angle="270">
+                    <span style="display: block; transform: rotateZ(-270deg);">VII</span>
+                </div>
+                <div class="zodiac-symbol" style="top: 15%; left: 15%; transform: translate(-50%, -50%) rotateZ(315deg);" data-angle="315">
+                    <span style="display: block; transform: rotateZ(-315deg);">VIII</span>
+                </div>
+            </div>
+
+            <div class="center-console">
+                <div class="status-indicator" id="statusIndicator"></div>
+                <div class="status-text" id="statusText">CONNECTING</div>
+                <div class="bot-status" id="botStatus">Initializing...</div>
+            </div>
+        </div>
+
+        <div class="control-grid">
+            <!-- Guild Selector -->
+            <div class="control-panel">
+                <div class="panel-title">
+                    <span class="panel-icon">🎛️</span>
+                    SERVER SELECTION
+                </div>
+                <div class="guild-selector">
+                    <label class="input-label">Active Server</label>
+                    <select id="guildSelect" onchange="selectGuild()">
+                        <option value="">Select a server...</option>
+                    </select>
+                </div>
+                <div class="input-label" style="margin-top: 15px;">Guild ID: <span id="selectedGuildId">None</span></div>
+            </div>
+
+            <!-- Music Control -->
+            <div class="control-panel">
+                <div class="panel-title">
+                    <span class="panel-icon">🎵</span>
+                    MUSIC CONTROL
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Song / URL</label>
+                    <input type="text" class="input-field" id="songInput" placeholder="Enter song name or YouTube URL">
+                </div>
+                <div class="btn-group">
+                    <button class="btn" onclick="playMusic()"><span>▶️ Play</span></button>
+                    <button class="btn" onclick="pauseMusic()"><span>⏸️ Pause</span></button>
+                    <button class="btn" onclick="skipSong()"><span>⏭️ Skip</span></button>
+                    <button class="btn" onclick="stopMusic()"><span>⏹️ Stop</span></button>
+                </div>
+            </div>
+
+            <!-- Volume Control -->
+            <div class="control-panel">
+                <div class="panel-title">
+                    <span class="panel-icon">🔊</span>
+                    VOLUME CONTROL
+                </div>
+                <div class="slider-container">
+                    <input type="range" class="slider" id="volumeSlider" min="0" max="100" value="40" oninput="updateVolume(this.value)">
+                    <div class="slider-value" id="volumeValue">40%</div>
+                </div>
+                <div class="btn-group" style="margin-top: 30px;">
+                    <button class="btn" onclick="setVolume(25)"><span>🔉 Low</span></button>
+                    <button class="btn" onclick="setVolume(50)"><span>🔊 Medium</span></button>
+                    <button class="btn" onclick="setVolume(75)"><span>🔊 High</span></button>
+                    <button class="btn" onclick="setVolume(100)"><span>🔊 Max</span></button>
+                </div>
+            </div>
+
+            <!-- Loop & Shuffle -->
+            <div class="control-panel">
+                <div class="panel-title">
+                    <span class="panel-icon">🔁</span>
+                    PLAYBACK MODES
+                </div>
+                <div class="btn-group">
+                    <button class="btn" onclick="setLoop('off')"><span>➡️ Off</span></button>
+                    <button class="btn" onclick="setLoop('song')"><span>🔂 Song</span></button>
+                    <button class="btn" onclick="setLoop('queue')"><span>🔁 Queue</span></button>
+                    <button class="btn" onclick="setLoop('random')"><span>🔀 Random</span></button>
+                </div>
+                <div class="btn-group" style="margin-top: 20px;">
+                    <button class="btn" onclick="shuffleQueue()"><span>🔀 Shuffle</span></button>
+                    <button class="btn" onclick="enableRadio()"><span>📻 Radio</span></button>
+                    <button class="btn" onclick="toggleCrossfade()"><span>🎵 Crossfade</span></button>
+                    <button class="btn" onclick="clearQueue()"><span>🗑️ Clear</span></button>
+                </div>
+            </div>
+
+            <!-- Queue -->
+            <div class="control-panel">
+                <div class="panel-title">
+                    <span class="panel-icon">📜</span>
+                    CURRENT QUEUE
+                </div>
+                <div class="queue-list" id="queueList">
+                    <div class="queue-item">
+                        <div class="queue-item-title">No songs in queue</div>
+                        <div class="queue-item-info">Add songs using the music control panel</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="control-panel">
+                <div class="panel-title">
+                    <span class="panel-icon">📊</span>
+                    STATISTICS
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-value" id="serverCount">0</div>
+                        <div class="stat-label">Servers</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="sessionCount">0</div>
+                        <div class="stat-label">Sessions</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="uptime">0h 0m</div>
+                        <div class="stat-label">Uptime</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="queueSize">0</div>
+                        <div class="stat-label">Queue Size</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            ✦ EMERALD MUSIC ✵ CELESTIAL DASHBOARD ✦
+        </div>
+    </div>
+
+    <script>
+        // WebSocket connection with explicit configuration
+        const socket = io(window.location.origin, {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionAttempts: 5,
+            timeout: 10000
+        });
+        let selectedGuildId = null;
+        
+        // Spam protection
+        const buttonCooldowns = new Map();
+        const COOLDOWN_MS = 1000; // 1 second cooldown
+        
+        // Disable button with visual feedback
+        function disableButton(buttonElement, duration) {
+            buttonElement.disabled = true;
+            buttonElement.classList.add('cooling-down');
+            
+            let remaining = Math.ceil(duration / 1000);
+            buttonElement.setAttribute('data-cooldown', `${remaining}s`);
+            
+            const interval = setInterval(() => {
+                remaining--;
+                if (remaining > 0) {
+                    buttonElement.setAttribute('data-cooldown', `${remaining}s`);
+                } else {
+                    clearInterval(interval);
+                    buttonElement.disabled = false;
+                    buttonElement.classList.remove('cooling-down');
+                    buttonElement.removeAttribute('data-cooldown');
+                }
+            }, 1000);
+        }
+        
+        // Get button element by onclick function name
+        function getButtonByAction(actionName) {
+            const buttons = document.querySelectorAll('.btn');
+            for (const btn of buttons) {
+                const onclick = btn.getAttribute('onclick');
+                if (onclick && onclick.includes(actionName)) {
+                    return btn;
+                }
+            }
+            return null;
+        }
+
+        // Generate starfield
+        const starfield = document.getElementById('starfield');
+        for (let i = 0; i < 150; i++) {
+            const star = document.createElement('div');
+            star.className = i % 10 === 0 ? 'star blue' : 'star';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            star.style.animationDelay = Math.random() * 4 + 's';
+            starfield.appendChild(star);
+        }
+
+        // Socket event handlers
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            document.getElementById('connectionError').style.display = 'none';
+            updateStatus('ONLINE', 'Connected');
+            loadGuilds();
+            loadStatus();
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+            updateStatus('OFFLINE', 'Disconnected');
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
+            document.getElementById('connectionError').style.display = 'block';
+            updateStatus('OFFLINE', 'Connection Error');
+        });
+
+        socket.on('status_update', (data) => {
+            updateDashboard(data);
+        });
+
+        socket.on('error', (data) => {
+            showNotification('❌ Error: ' + data.message, 'error');
+        });
+
+        // Update status indicator
+        function updateStatus(status, message) {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            const botStatus = document.getElementById('botStatus');
+
+            statusText.textContent = status;
+            botStatus.textContent = message;
+
+            if (status === 'ONLINE') {
+                indicator.classList.remove('offline');
+            } else {
+                indicator.classList.add('offline');
+            }
+        }
+
+        // Load guilds list
+        async function loadGuilds() {
+            try {
+                const response = await fetch('/api/guilds');
+                const data = await response.json();
+                
+                const select = document.getElementById('guildSelect');
+                select.innerHTML = '<option value="">Select a server...</option>';
+                
+                data.guilds.forEach(guild => {
+                    const option = document.createElement('option');
+                    option.value = guild.id;
+                    option.textContent = `${guild.name} ${guild.has_session ? '🎵' : ''}`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Failed to load guilds:', error);
+                showNotification('❌ Failed to load servers', 'error');
+            }
+        }
+
+        // Load status
+        async function loadStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                updateDashboard(data);
+            } catch (error) {
+                console.error('Failed to load status:', error);
+            }
+        }
+
+        // Update dashboard with new data
+        function updateDashboard(data) {
+            if (data.servers !== undefined) {
+                document.getElementById('serverCount').textContent = data.servers;
+            }
+            if (data.sessions !== undefined) {
+                document.getElementById('sessionCount').textContent = data.sessions;
+            }
+            if (data.uptime) {
+                document.getElementById('uptime').textContent = data.uptime;
+            }
+
+            // Update selected guild's queue size
+            if (selectedGuildId && data.sessions_data) {
+                const sessionData = data.sessions_data.find(s => s.guild_id == selectedGuildId);
+                if (sessionData) {
+                    document.getElementById('queueSize').textContent = sessionData.queue_size || 0;
+                    if (sessionData.volume !== undefined) {
+                        document.getElementById('volumeSlider').value = sessionData.volume;
+                        document.getElementById('volumeValue').textContent = sessionData.volume + '%';
+                    }
+                }
+            }
+        }
+
+        // Guild selection
+        function selectGuild() {
+            const select = document.getElementById('guildSelect');
+            selectedGuildId = select.value;
+            document.getElementById('selectedGuildId').textContent = selectedGuildId || 'None';
+            
+            if (selectedGuildId) {
+                loadGuildQueue();
+            }
+        }
+
+        // Load guild queue
+        async function loadGuildQueue() {
+            if (!selectedGuildId) return;
+            
+            try {
+                const response = await fetch(`/api/session/${selectedGuildId}`);
+                const data = await response.json();
+                
+                const queueList = document.getElementById('queueList');
+                queueList.innerHTML = '';
+                
+                if (data.current_song) {
+                    const currentItem = document.createElement('div');
+                    currentItem.className = 'queue-item';
+                    currentItem.innerHTML = `
+                        <div class="queue-item-title">▶️ ${data.current_song.title}</div>
+                        <div class="queue-item-info">${data.current_song.uploader}</div>
+                    `;
+                    queueList.appendChild(currentItem);
+                }
+                
+                if (data.queue && data.queue.length > 0) {
+                    data.queue.forEach(song => {
+                        const item = document.createElement('div');
+                        item.className = 'queue-item';
+                        const status = song.is_downloaded ? '✅' : '⏳';
+                        item.innerHTML = `
+                            <div class="queue-item-title">${status} ${song.position}. ${song.title}</div>
+                            <div class="queue-item-info">${song.uploader}</div>
+                        `;
+                        queueList.appendChild(item);
+                    });
+                } else if (!data.current_song) {
+                    queueList.innerHTML = `
+                        <div class="queue-item">
+                            <div class="queue-item-title">No songs in queue</div>
+                            <div class="queue-item-info">Add songs using the music control panel</div>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('queueSize').textContent = data.queue_size || 0;
+            } catch (error) {
+                console.error('Failed to load queue:', error);
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // API call helper with spam protection
+        async function apiCall(endpoint, data = {}, buttonAction = null) {
+            if (!selectedGuildId) {
+                showNotification('⚠️ Please select a server first', 'warning');
+                return;
+            }
+            
+            // Check cooldown
+            const now = Date.now();
+            const lastCall = buttonCooldowns.get(endpoint) || 0;
+            const timeSinceLastCall = now - lastCall;
+            
+            if (timeSinceLastCall < COOLDOWN_MS) {
+                return; // Silently ignore if on cooldown
+            }
+            
+            // Set cooldown and disable button
+            buttonCooldowns.set(endpoint, now);
+            
+            if (buttonAction) {
+                const button = getButtonByAction(buttonAction);
+                if (button) {
+                    disableButton(button, COOLDOWN_MS);
+                }
+            }
+            
+            try {
+                const response = await fetch(`/api/${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ ...data, guild_id: selectedGuildId })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showNotification('✅ Success!');
+                    if (endpoint === 'play') {
+                        setTimeout(() => loadGuildQueue(), 1000);
+                    }
+                } else {
+                    showNotification('❌ ' + (result.error || 'Unknown error'), 'error');
+                }
+                
+                return result;
+            } catch (error) {
+                showNotification('❌ Connection error', 'error');
+                console.error('API call failed:', error);
+            }
+        }
+
+        // Music control functions
+        async function playMusic() {
+            const song = document.getElementById('songInput').value;
+            if (!song) {
+                showNotification('⚠️ Please enter a song name or URL', 'warning');
+                return;
+            }
+            await apiCall('play', { search: song }, 'playMusic');
+            document.getElementById('songInput').value = '';
+        }
+
+        async function pauseMusic() {
+            await apiCall('pause', {}, 'pauseMusic');
+        }
+
+        async function resumeMusic() {
+            await apiCall('resume', {}, 'resumeMusic');
+        }
+
+        async function skipSong() {
+            await apiCall('skip', {}, 'skipSong');
+            setTimeout(() => loadGuildQueue(), 500);
+        }
+
+        async function stopMusic() {
+            await apiCall('stop', {}, 'stopMusic');
+            setTimeout(() => loadGuildQueue(), 500);
+        }
+
+        // Volume control with spam protection
+        function updateVolume(value) {
+            document.getElementById('volumeValue').textContent = value + '%';
+        }
+
+        async function setVolume(value) {
+            // Check cooldown for volume specifically
+            const now = Date.now();
+            const lastCall = buttonCooldowns.get('volume-button') || 0;
+            if (now - lastCall < COOLDOWN_MS) {
+                return; // Silently ignore
+            }
+            buttonCooldowns.set('volume-button', now);
+            
+            // Disable all volume buttons
+            const volumeButtons = document.querySelectorAll('.btn[onclick^="setVolume"]');
+            volumeButtons.forEach(btn => disableButton(btn, COOLDOWN_MS));
+            
+            document.getElementById('volumeSlider').value = value;
+            updateVolume(value);
+            await apiCall('volume', { volume: value });
+        }
+
+        // Apply volume when slider is released
+        document.addEventListener('DOMContentLoaded', () => {
+            const slider = document.getElementById('volumeSlider');
+            slider.addEventListener('change', async (e) => {
+                await apiCall('volume', { volume: e.target.value });
+            });
+        });
+
+        // Loop modes
+        async function setLoop(mode) {
+            await apiCall('loop', { mode: mode }, 'setLoop');
+        }
+
+        async function shuffleQueue() {
+            await apiCall('shuffle', {}, 'shuffleQueue');
+            setTimeout(() => loadGuildQueue(), 500);
+        }
+
+        async function enableRadio() {
+            await apiCall('radio', {}, 'enableRadio');
+            setTimeout(() => loadGuildQueue(), 1000);
+        }
+
+        async function toggleCrossfade() {
+            await apiCall('crossfade', {}, 'toggleCrossfade');
+        }
+
+        async function clearQueue() {
+            await apiCall('clear', {}, 'clearQueue');
+            setTimeout(() => loadGuildQueue(), 500);
+        }
+
+        // Refresh queue periodically
+        setInterval(() => {
+            if (selectedGuildId) {
+                loadGuildQueue();
+            }
+        }, 5000);
+
+        // Refresh status periodically
+        setInterval(() => {
+            loadStatus();
+        }, 3000);
+
+        // Handle song input enter key
+        document.addEventListener('DOMContentLoaded', () => {
+            const songInput = document.getElementById('songInput');
+            songInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    playMusic();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
